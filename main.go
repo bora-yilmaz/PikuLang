@@ -260,6 +260,15 @@ func eval(node *Node, env *Env, ln int) (*St, error, *Env) {
 				return nil, err, nil
 			}
 			return nil, nil, env
+		case "if":
+			res, err, env := eval(node.Children[1], env, ln)
+			if err != nil{
+				return nil, err, nil
+			}
+			if res.valt == "n" && res.varval <= 0{
+				return eval(node.Children[3], env, ln)
+			}
+			return eval(node.Children[2], env, ln)
 		default:
 			return nil, fmt.Errorf("unknown command: %s, line: %d", node.Children[0].Value, ln), nil
 		}
