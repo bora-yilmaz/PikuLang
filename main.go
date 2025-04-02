@@ -117,6 +117,7 @@ type St struct {
 	valt    string
 	funcval *Function
 	varval  int
+	listval *[]St
 }
 
 type Env struct {
@@ -162,19 +163,13 @@ func eval(node *Node, env *Env, ln int) (*St, error, *Env) {
 			}
 			return nil, err, nil
 		case "echo":
-			b, err2, env := eval(node.Children[1], env, ln)
-
-			if err2 != nil {
-				return nil, err2, nil
+			x, err, env := eval(node.Children[1], env, ln)
+			if err != nil{
+				return nil, err, nil
 			}
-
-			if b.valt == "n" {
-				_, err := fmt.Println(b.varval)
-				return nil, err, env
-			}
-			_, err := fmt.Printf("Unprintable Value: %s line: %d", node.Children[1].Value, ln)
-
-			return nil, err, env
+			a, b := pv(x, env, ln)
+			fmt.Println()
+			return nil, a, b
 		case "func":
 			arg := []string{}
 			for _, a := range node.Children[1].Children {
@@ -269,12 +264,62 @@ func eval(node *Node, env *Env, ln int) (*St, error, *Env) {
 				return eval(node.Children[3], env, ln)
 			}
 			return eval(node.Children[2], env, ln)
+		case "list":
+			lst := []St{}
+			var b *St
+			var err error
+			for _, a := range node.Children[1:]{
+				b, err, env = eval(a, env, ln)
+				if err != nil{
+					return nil, err, nil
+				}
+				lst = append(lst, *b)
+			}
+			return &St{valt: "l", listval: &lst}, nil, env
+		case "index":
+			a, err, env := eval(node.Children[1], env, ln)
+			if err != nil{
+				return nil, err, nil
+			}
+			b, err2, env := eval(node.Children[2], env, ln)
+			if err2 != nil{
+				return nil, err2, nil
+			}
+			return &(*(a.listval))[b.varval], nil, env
 		default:
 			return nil, fmt.Errorf("unknown command: %s, line: %d", node.Children[0].Value, ln), nil
 		}
 	default:
 		return nil, fmt.Errorf("compiler internal error 181, line: %d", ln), nil
 	}
+}
+
+func pv(node *St, env *Env, ln int) (error, *Env){
+
+	b := node
+
+	var err error
+
+	if b.valt == "n" {
+		_, err := fmt.Printf("%d", b.varval)
+		return err, env
+	}
+
+	if b.valt == "l" {
+		fmt.Printf("[ list ")
+		for _, a := range *b.listval{
+			err, env = pv(&a, env, ln)
+			if err != nil{
+				return err, nil
+			}
+			fmt.Printf(" ")
+		}
+		fmt.Printf("] ")
+		return nil, env
+	}
+	_, err = fmt.Printf("Unprintable Value: %+v line: %d", b, ln)
+
+	return err, env
 }
 
 func pass(a any) {
