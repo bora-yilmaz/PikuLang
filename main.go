@@ -286,11 +286,60 @@ func eval(node *Node, env *Env, ln int) (*St, error, *Env) {
 				return nil, err2, nil
 			}
 			return &(*(a.listval))[b.varval], nil, env
+		case "range":
+			a, err, env := eval(node.Children[1], env, ln)
+			if err != nil{
+				return nil, err, nil
+			}
+			b, err2, env := eval(node.Children[2], env, ln)
+			if err2 != nil{
+				return nil, err2, nil
+			}
+			c, err3, env := eval(node.Children[3], env, ln)
+			if err3 != nil{
+				return nil, err3, nil
+			}
+			d := (*(a.listval))[b.varval:]
+			if c.varval != 0{
+				d = (*(a.listval))[b.varval:c.varval]
+			}
+			return &St{valt:"l", listval: &d}, nil, env
+		case "edit":
+			lin := node.Children[1].Value
+			i, err2, env := eval(node.Children[2], env, ln)
+			if err2 != nil{
+				return nil, err2, nil
+			}
+			val, err3, env := eval(node.Children[3], env, ln)
+			if err3 != nil{
+				return nil, err3, nil
+			}
+			(*(env.vals[lin].listval))[i.varval] = *val
+			return env.vals[lin], nil, env
+		case "printchar":
+			cp, err, env := eval(node.Children[1], env, ln)
+			if err != nil{
+				return nil, err, nil
+			}
+			fmt.Printf("%c", rune(cp.varval))
+			return nil, nil, env
+		case "newline":
+			fmt.Println()
+			return nil, nil, env
+		case "print":
+			cs, err, env := eval(node.Children[1], env, ln)
+			if err != nil{
+				return nil, err, nil
+			}
+			for _, c := range *cs.listval{
+				fmt.Printf("%c", c.varval)
+			}
+			return nil, nil, env
 		default:
 			return nil, fmt.Errorf("unknown command: %s, line: %d", node.Children[0].Value, ln), nil
 		}
 	default:
-		return nil, fmt.Errorf("compiler internal error 181, line: %d", ln), nil
+		return nil, fmt.Errorf("interpreter internal error 181, line: %d", ln), nil
 	}
 }
 
